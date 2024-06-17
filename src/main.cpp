@@ -1489,7 +1489,7 @@ void setup()
   pinMode(12, INPUT_PULLUP);
 
   pinMode(11, OUTPUT);   // only needed for tests and debugging
-  
+
   // Hard Reset the RFM module
   pinMode(RFM69_RST, OUTPUT);   // Feather M0: 4
   digitalWrite(RFM69_RST, HIGH);  
@@ -2318,7 +2318,9 @@ bool sendWithRetry(uint8_t toAddress, const void* buffer, uint8_t bufferSize, ui
 {
   volatile unsigned long sentTime;
   volatile unsigned long actTime;
+  volatile unsigned short waitTime;
   //Serial.println("I am in sendWithRetry routine");
+  waitTime = retryWaitTime + 100;
   for (uint8_t i = 0; i <= retries; i++)
   {
     send(toAddress, buffer, bufferSize, true);
@@ -2331,6 +2333,9 @@ bool sendWithRetry(uint8_t toAddress, const void* buffer, uint8_t bufferSize, ui
 #ifdef DebugPrint        
         Serial.print("ACK received   "); Serial.print(" ~ms: "); Serial.println(millis() - sentTime);
 #endif
+        volatile unsigned long dummy1 = millis() - sentTime;
+        volatile unsigned long dummy2 = dummy1;
+
         return true;
       }
       
@@ -2344,18 +2349,23 @@ bool sendWithRetry(uint8_t toAddress, const void* buffer, uint8_t bufferSize, ui
       actTime = millis();
       digitalWrite(LED, LOW);   
       //Serial.println(" ("); Serial.print("actTime = "); Serial.print(actTime); Serial.print("  sentTime = ");Serial.print(sentTime); Serial.print(" elapsed = ");Serial.print(actTime - sentTime);
-      if(actTime - sentTime > retryWaitTime)     
-      break;      
-      }
+      if(actTime - sentTime > waitTime)     
+      break;  // leave while (true) loop   
+    }         // end while (true)
+    volatile unsigned long dummy3 = actTime - sentTime;
+    volatile unsigned long dummy4 = dummy3;         
 #ifdef DebugPrint
     Serial.print(" RETRY#"); Serial.println(i + 1);
 #endif
-  }
+  }  // end for loop <= retries
 #ifdef DebugPrint
   Serial.println(" Leaving sendWithRetry, State: false");
 #endif
+  //volatile int dummy4 = 1;
   return false;
-}
+}  // end method sendWithRetry
+
+
 // set *transmit/TX* output power: 0=min, 31=max
 // this results in a "weaker" transmitted signal, and directly results in a lower RSSI at the receiver
 // the power configurations are explained in the SX1231H datasheet (Table 10 on p21; RegPaLevel p66): http://www.semtech.com/images/datasheet/sx1231h.pdf
